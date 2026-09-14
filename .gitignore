@@ -4,6 +4,13 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### macOS ###
+.DS_Store
+.DS_Store?
+*.swp
+*.swo
+*~
+
 ### STS ###
 .apt_generated
 .classpath
@@ -31,3 +38,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment ###
+.env
+.env.local
+.env.*.local
