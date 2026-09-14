@@ -4,6 +4,7 @@ import com.smartstore.smartstore.config.CustomUserDetails;
 import com.smartstore.smartstore.dto.*;
 import com.smartstore.smartstore.entity.User;
 import com.smartstore.smartstore.service.UserService;
+import com.smartstore.smartstore.util.JwtTokenProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,14 +21,16 @@ public class AuthRestController {
 
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthRestController(UserService userService, AuthenticationManager authenticationManager) {
+    public AuthRestController(UserService userService, AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<LoginResponse>> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> register(@RequestBody RegisterRequest registerRequest) {
         try {
             log.info("Registering new user: {}", registerRequest.getUsername());
             User user = new User();
@@ -38,14 +41,15 @@ public class AuthRestController {
             user.setLastName(registerRequest.getLastName());
 
             User registeredUser = userService.registerUser(user);
+            String token = jwtTokenProvider.generateToken(registeredUser.getUsername());
             
-            LoginResponse response = new LoginResponse(
-                    registeredUser.getId(),
-                    registeredUser.getUsername(),
-                    registeredUser.getEmail(),
-                    "Registration successful!"
-            );
+            JwtAuthResponse response = new JwtAuthResponse();
+            response.setToken(token);
+            response.setUserId(registeredUser.getId());
+            response.setUsername(registeredUser.getUsername());
+            response.setEmail(registeredUser.getEmail());
 
+            log.info("User registered successfully: {}", registeredUser.getUsername());
             return ResponseEntity.ok(ApiResponse.success("User registered successfully", response));
         } catch (IllegalArgumentException e) {
             log.warn("Registration failed: {}", e.getMessage());
@@ -54,7 +58,7 @@ public class AuthRestController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> login(@RequestBody LoginRequest loginRequest) {
         try {
             log.info("User login attempt: {}", loginRequest.getUsername());
             
@@ -68,13 +72,13 @@ public class AuthRestController {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            String token = jwtTokenProvider.generateToken(userDetails.getUsername());
             
-            LoginResponse response = new LoginResponse(
-                    userDetails.getId(),
-                    userDetails.getUsername(),
-                    userDetails.getEmail(),
-                    "Login successful!"
-            );
+            JwtAuthResponse response = new JwtAuthResponse();
+            response.setToken(token);
+            response.setUserId(userDetails.getId());
+            response.setUsername(userDetails.getUsername());
+            response.setEmail(userDetails.getEmail());
 
             log.info("User logged in successfully: {}", userDetails.getUsername());
             return ResponseEntity.ok(ApiResponse.success("Login successful", response));
