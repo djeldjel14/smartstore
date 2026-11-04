@@ -1,0 +1,35 @@
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.log
+
+# Node.js / React
+node_modules/
+dist/
+build/
+.npm/
+
+# IDE settings
+.idea/workspace.xml
+.idea/shelf/
+.vscode/
+
+# Temporary files
+*.tmp
+*.swp
+
+# Obsidian settings
+**/.obsidian/
