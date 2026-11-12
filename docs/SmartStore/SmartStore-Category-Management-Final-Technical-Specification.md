@@ -202,8 +202,10 @@ CREATE TABLE categories (
     parent_id BIGINT NULL,
 
     -- Technical column: root parent NULL maps to reserved value 0.
+    -- VIRTUAL is used because the MySQL 9.5.0 probe rejected STORED
+    -- when combined with this table's self-referencing foreign key.
     parent_id_unique BIGINT
-        GENERATED ALWAYS AS (COALESCE(parent_id, 0)) STORED,
+        GENERATED ALWAYS AS (COALESCE(parent_id, 0)) VIRTUAL,
 
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
@@ -216,8 +218,6 @@ CREATE TABLE categories (
 
     CONSTRAINT chk_categories_parent_positive
         CHECK (parent_id IS NULL OR parent_id > 0),
-    CONSTRAINT chk_categories_not_own_parent
-        CHECK (parent_id IS NULL OR parent_id <> id),
 
     CONSTRAINT fk_categories_parent
         FOREIGN KEY (parent_id)
@@ -241,6 +241,18 @@ The generated column maps:
 Real `AUTO_INCREMENT` IDs are positive and the check constraint disallows non-positive parent IDs, so `0` is reserved for the root grouping. The unique index `(parent_id_unique, name)` then enforces root-name and sibling-name uniqueness while permitting the same name under different parents.
 
 The generated column is not user-editable and must not be included in API DTOs.
+
+**MySQL 9.5.0 compatibility verification:** A temporary-table probe on the target
+instance accepted the complete uniqueness and self-referencing-FK design with a
+`VIRTUAL` generated column. The corresponding `STORED` variant failed when the
+self-referencing foreign key was added. Therefore this specification uses
+`VIRTUAL`; this is a technical implementation correction and does not change the
+approved uniqueness rules.
+
+MySQL also rejected a `CHECK` constraint that compares `parent_id` with the
+`AUTO_INCREMENT` `id` column. The no-self-parent rule remains mandatory, but it
+must be enforced in `CategoryService` rather than with
+`chk_categories_not_own_parent`. The positive-parent check remains in the DDL.
 
 ## 4.3 Collation implications
 
